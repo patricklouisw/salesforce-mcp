@@ -197,10 +197,11 @@ if __name__ == "__main__":
         mcp.run(transport="stdio")
     else:
         logger.info("Starting Salesforce MCP server (%s) on %s:%s...", transport, host, port)
+
         app = Starlette(
             routes=[
                 Route("/health", health_check),
-                Mount("/", app=mcp.sse_app()),
+                Mount("/", app=mcp.streamable_http_app()),
             ],
             middleware=[
                 Middleware(
