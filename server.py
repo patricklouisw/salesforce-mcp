@@ -6,6 +6,7 @@ import sys
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
@@ -194,6 +195,7 @@ if __name__ == "__main__":
                 Mount("/", app=mcp.sse_app()),
             ],
             middleware=[
+                Middleware(TrustedHostMiddleware, allowed_hosts=["*"]),
                 Middleware(BearerAuthMiddleware),
             ],
         )
