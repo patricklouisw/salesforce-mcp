@@ -1,0 +1,9 @@
+.git
+.gitignore
+.sfdx
+.venv
+__pycache__
+*.pyc
+.env
+CLAUDE.md
+README.md
