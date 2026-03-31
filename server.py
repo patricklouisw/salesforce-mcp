@@ -36,6 +36,9 @@ CASE_NUMBER_WIDTH = 8
 # ---------------------------------------------------------------------------
 class BearerAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        # Skip auth for health check
+        if request.url.path == "/health":
+            return await call_next(request)
         api_key = os.environ.get("MCP_API_KEY")
         if api_key:
             auth_header = request.headers.get("Authorization", "")
