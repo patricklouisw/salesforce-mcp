@@ -12,6 +12,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from simple_salesforce import Salesforce
 
 # ---------------------------------------------------------------------------
@@ -24,7 +25,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("salesforce-mcp")
 
-mcp = FastMCP("salesforce-simple-mcp")
+mcp = FastMCP(
+    "salesforce-simple-mcp",
+    transport_security=TransportSecuritySettings(enable_dns_rebinding_protection=False),
+)
 
 CASE_NUMBER_RE = re.compile(r"^\d{1,10}$")
 CASE_NUMBER_WIDTH = 8
@@ -36,8 +40,8 @@ CASE_NUMBER_WIDTH = 8
 # ---------------------------------------------------------------------------
 class BearerAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Skip auth for health check
-        if request.url.path == "/health":
+        # Skip auth for health check and CORS preflight requests
+        if request.url.path == "/health" or request.method == "OPTIONS":
             return await call_next(request)
         api_key = os.environ.get("MCP_API_KEY")
         if api_key:
