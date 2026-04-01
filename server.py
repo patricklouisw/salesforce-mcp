@@ -1,7 +1,9 @@
+import contextlib
 import logging
 import os
 import re
 import sys
+from collections.abc import AsyncIterator
 
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
@@ -185,6 +187,36 @@ def get_case(case_number: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# App factory
+# ---------------------------------------------------------------------------
+def create_app() -> Starlette:
+    streamable_http_app = mcp.streamable_http_app()
+
+    @contextlib.asynccontextmanager
+    async def lifespan(app: Starlette) -> AsyncIterator[None]:
+        async with mcp.session_manager.run():
+            yield
+
+    return Starlette(
+        routes=[
+            Route("/health", health_check),
+            Mount("/", app=streamable_http_app),
+        ],
+        middleware=[
+            Middleware(
+                CORSMiddleware,
+                allow_origins=["*"],
+                allow_methods=["*"],
+                allow_headers=["*"],
+            ),
+            Middleware(TrustedHostMiddleware, allowed_hosts=["*"]),
+            Middleware(BearerAuthMiddleware),
+        ],
+        lifespan=lifespan,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
@@ -198,23 +230,6 @@ if __name__ == "__main__":
     else:
         logger.info("Starting Salesforce MCP server (%s) on %s:%s...", transport, host, port)
 
-        app = Starlette(
-            routes=[
-                Route("/health", health_check),
-                Mount("/", app=mcp.streamable_http_app()),
-            ],
-            middleware=[
-                Middleware(
-                    CORSMiddleware,
-                    allow_origins=["*"],
-                    allow_methods=["*"],
-                    allow_headers=["*"],
-                ),
-                Middleware(TrustedHostMiddleware, allowed_hosts=["*"]),
-                Middleware(BearerAuthMiddleware),
-            ],
-        )
-
         import uvicorn
 
-        uvicorn.run(app, host=host, port=port)
+        uvicorn.run(create_app(), host=host, port=port)
